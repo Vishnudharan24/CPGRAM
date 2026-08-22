@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cpgrams_grievance}
+      POSTGRES_USER: ${POSTGRES_USER:-cpgrams_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cpgrams_admin} -d ${POSTGRES_DB:-cpgrams_grievance}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  fastapi:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://cpgrams_admin:changeme@postgres:5432/cpgrams_grievance}
+      JWT_SECRET: ${JWT_SECRET:-change-this-for-demo}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-1440}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - fastapi
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:
