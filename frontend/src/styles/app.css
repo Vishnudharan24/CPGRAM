@@ -99,6 +99,7 @@ main { min-height: calc(100vh - 72px); }
   padding: clamp(18px, 3vw, 28px);
 }
 .narrow { width: min(460px, calc(100% - 32px)); margin: 44px auto; }
+.narrow:has(.registration-form) { width: min(720px, calc(100% - 32px)); }
 .section-head {
   justify-content: space-between;
   margin-bottom: 18px;
@@ -118,6 +119,7 @@ p { line-height: 1.55; }
 .notice { color: #0f5d57; background: #eef8f4; padding: 0.75rem; border-radius: 8px; }
 
 .stack { display: grid; gap: 1rem; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 label { display: grid; gap: 0.45rem; font-weight: 700; }
 input, textarea, select {
   width: 100%;
@@ -143,6 +145,26 @@ textarea { resize: vertical; }
   background: #f8fbfa;
 }
 .classification h2 { text-transform: capitalize; }
+.organization-panel { grid-column: 1 / -1; }
+.organization-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  max-height: 560px;
+  overflow-y: auto;
+  margin: 1rem 0;
+  padding-right: 0.25rem;
+}
+.organization-card {
+  min-height: 92px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 0.7rem;
+  line-height: 1.35;
+}
+.organization-card svg { flex: 0 0 auto; color: #d94c3d; }
+.organization-card.selected { border: 2px solid #0f5d57; background: #eef8f4; }
 
 .summary-row {
   display: grid;
@@ -231,6 +253,8 @@ textarea { resize: vertical; }
   .topbar { padding: 0 16px; }
   .brand small, .top-actions { display: none; }
   .hero, .two-col, .grievance-card { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .organization-grid { grid-template-columns: 1fr; max-height: none; }
   .hero { min-height: auto; padding-bottom: 120px; }
   .summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card-meta { justify-content: flex-start; }

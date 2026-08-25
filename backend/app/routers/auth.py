@@ -17,6 +17,15 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
     user = User(
         name=payload.name,
+        gender=payload.gender,
+        premise_name=payload.premise_name,
+        sub_locality=payload.sub_locality,
+        locality=payload.locality,
+        country=payload.country,
+        state=payload.state,
+        district=payload.district,
+        pincode=payload.pincode,
+        mobile_number=payload.mobile_number,
         email=payload.email.lower(),
         phone=payload.phone,
         role=payload.role,

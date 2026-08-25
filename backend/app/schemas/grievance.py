@@ -26,9 +26,15 @@ class ClassificationResponse(BaseModel):
     matched_terms: list[str]
 
 
+class OrganizationRead(BaseModel):
+    name: str
+    code: str
+
+
 class GrievanceCreate(BaseModel):
     raw_description: str
     category: GrievanceCategory
+    organization_code: str
 
 
 class EventRead(BaseModel):
@@ -67,6 +73,8 @@ class GrievanceListItem(BaseModel):
     id: UUID
     registration_id: str
     raw_description: str
+    organization_name: str
+    organization_code: str
     category: GrievanceCategory
     status: GrievanceStatus
     citizen_rating: Rating | None = None

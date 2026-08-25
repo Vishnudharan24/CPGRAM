@@ -16,6 +16,8 @@ class Grievance(Base):
     citizen_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     current_department_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("departments.id"), nullable=False)
     raw_description: Mapped[str] = mapped_column(Text, nullable=False)
+    organization_name: Mapped[str] = mapped_column(String(240), nullable=False)
+    organization_code: Mapped[str] = mapped_column(String(20), nullable=False)
     category: Mapped[GrievanceCategory] = mapped_column(Enum(GrievanceCategory), nullable=False)
     status: Mapped[GrievanceStatus] = mapped_column(Enum(GrievanceStatus), nullable=False, default=GrievanceStatus.submitted)
     citizen_rating: Mapped[Rating] = mapped_column(Enum(Rating), nullable=True)

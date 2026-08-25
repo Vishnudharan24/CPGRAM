@@ -10,10 +10,11 @@ from app.deps import get_db, require_role
 from app.models.grievance import Grievance
 from app.models.grievance_event import GrievanceEvent
 from app.models.user import User
-from app.schemas.grievance import AppealRequest, ClassificationRequest, ClassificationResponse, GrievanceCreate, GrievanceDetail, GrievanceListItem, RateRequest
+from app.schemas.grievance import AppealRequest, ClassificationRequest, ClassificationResponse, GrievanceCreate, GrievanceDetail, GrievanceListItem, OrganizationRead, RateRequest
 from app.services.classifier import classify_description
 from app.services.routing_engine import choose_starting_department, route_grievance
 from app.services.sla_engine import open_appeal_window, open_resolution_window
+from app.services.organizations import organization_by_code, organization_options
 
 router = APIRouter(prefix="/grievances", tags=["grievances"])
 
@@ -43,6 +44,11 @@ def classify(payload: ClassificationRequest, _user: User = Depends(require_role(
     return ClassificationResponse(**result.__dict__)
 
 
+@router.get("/organizations", response_model=list[OrganizationRead])
+def list_organizations(_user: User = Depends(require_role(UserRole.citizen, UserRole.admin))):
+    return organization_options()
+
+
 @router.post("", response_model=GrievanceDetail, status_code=status.HTTP_201_CREATED)
 def create_grievance(payload: GrievanceCreate, db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.admin))):
     count = db.scalar(select(func.count(Grievance.id))) or 0
@@ -50,11 +56,16 @@ def create_grievance(payload: GrievanceCreate, db: Session = Depends(get_db), us
     starting_department = choose_starting_department(db, payload.raw_description)
     if not starting_department:
         raise HTTPException(status_code=500, detail="No departments seeded")
+    organization = organization_by_code(payload.organization_code)
+    if not organization:
+        raise HTTPException(status_code=400, detail="Invalid organisation selected")
     grievance = Grievance(
         registration_id=registration_id,
         citizen_id=user.id,
         current_department_id=starting_department.id,
         raw_description=payload.raw_description,
+        organization_name=organization["name"],
+        organization_code=organization["code"],
         category=payload.category,
         status=GrievanceStatus.submitted,
     )

@@ -46,6 +46,8 @@ def create_seed_grievance(db, citizen, registration_id, description, category, s
         citizen_id=citizen.id,
         current_department_id=department.id,
         raw_description=description,
+        organization_name="Public Services Ministry",
+        organization_code="PUBLIC",
         category=category,
         status=status,
         citizen_rating=rating,

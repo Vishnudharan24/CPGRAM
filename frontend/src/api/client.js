@@ -19,6 +19,16 @@ export function clearSession() {
   localStorage.removeItem('cpgrams_user')
 }
 
+function formatApiError(detail) {
+  if (Array.isArray(detail)) {
+    return detail.map((item) => {
+      const field = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : 'form'
+      return `${field}: ${item.msg}`
+    }).join('; ')
+  }
+  return typeof detail === 'string' ? detail : 'Request failed'
+}
+
 export async function api(path, options = {}) {
   const token = getToken()
   const response = await fetch(`${API_BASE}${path}`, {
@@ -31,7 +41,7 @@ export async function api(path, options = {}) {
   })
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error(data.detail || 'Request failed')
+    throw new Error(formatApiError(data.detail))
   }
   return data
 }
