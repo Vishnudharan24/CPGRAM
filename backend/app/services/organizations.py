@@ -92,6 +92,10 @@ ORGANIZATIONS = (
     ("Unique Identification Authority of India", "UIDAI"),
 )
 
+_ORGANIZATION_CODES = [code for _, code in ORGANIZATIONS]
+if len(_ORGANIZATION_CODES) != len(set(_ORGANIZATION_CODES)):
+    raise ValueError("Organisation codes must be unique")
+
 
 def organization_options():
     return [{"name": name, "code": code} for name, code in ORGANIZATIONS]

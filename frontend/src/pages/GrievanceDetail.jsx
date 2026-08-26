@@ -46,6 +46,7 @@ export default function GrievanceDetail({ id }) {
         <div>
           <p className="eyebrow">{item.registration_id}</p>
           <h1>{item.category} · {item.status.replace('_', ' ')}</h1>
+          <p className="muted">Organisation: <strong>{item.organization_name}</strong> ({item.organization_code})</p>
           <p>{item.raw_description}</p>
         </div>
         <SLAClock windows={item.review_windows} />
