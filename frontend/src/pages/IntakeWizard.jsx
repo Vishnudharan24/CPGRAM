@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ArrowRight, Building2, Send, ChevronRight } from 'lucide-react'
 import { api } from '../api/client.js'
 import ClassificationCard from '../components/ClassificationCard.jsx'
@@ -170,55 +170,75 @@ export default function IntakeWizard({ navigate }) {
       {step >= 4 && <div className="panel">
         <p className="eyebrow">Step 4</p>
         <h1>Category Details</h1>
-        <p className="muted">Select the specific nature of your grievance.</p>
+        <p className="muted" style={{ marginBottom: '1.5rem' }}>Select the specific nature of your grievance.</p>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, max-content) 1fr', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ fontWeight: 'bold' }}>Ministry / Department <span style={{color: 'red'}}>*</span></div>
+          <div>{organizations.find(o => o.code === organizationCode)?.name}</div>
+
           {[1, 2, 3, 4, 5, 6, 7].map(level => {
             const options = getOptionsForLevel(level);
             if (options.length === 0) return null;
+            const labelText = level === 1 ? 'Select main category' : 'Select next level category';
             return (
-              <label key={level}>
-                Level {level} Category
+              <React.Fragment key={level}>
+                <div style={{ fontWeight: 'bold' }}>{labelText} <span style={{color: 'red'}}>*</span></div>
                 <select 
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--surface)' }}
                   value={selectedHierarchy[level] || ''} 
                   onChange={(e) => handleHierarchySelect(level, e.target.value)}
                 >
                   <option value="">Select option...</option>
                   {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
-              </label>
+              </React.Fragment>
             )
           })}
         </div>
 
         {finalCategory && finalCategory.parsed_input_fields && finalCategory.parsed_input_fields.length > 0 && (
-          <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--surface-variant)', borderRadius: '8px' }}>
-            <h3>Additional Details Required</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-              {finalCategory.parsed_input_fields.map((field, idx) => (
-                <label key={idx}>
-                  {field.label} {field.required && <span style={{color: 'red'}}>*</span>}
-                  {field.type && field.type.toLowerCase() === 'dropdown' ? (
-                    <select
-                      required={field.required}
-                      value={categoryInputValues[field.label] || ''}
-                      onChange={e => setCategoryInputValues({...categoryInputValues, [field.label]: e.target.value})}
-                    >
-                      <option value="">Select...</option>
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      required={field.required}
-                      value={categoryInputValues[field.label] || ''}
-                      onChange={e => setCategoryInputValues({...categoryInputValues, [field.label]: e.target.value})}
-                    />
-                  )}
-                </label>
-              ))}
+          <div style={{ marginTop: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, max-content) 1fr', gap: '1rem', alignItems: 'center' }}>
+              {finalCategory.parsed_input_fields.map((field, idx) => {
+                const isDropdown = field.control && field.control.toLowerCase() === 'dropdown';
+                let inputType = 'text';
+                if (field.data_type) {
+                  const dt = field.data_type.toLowerCase();
+                  if (dt === 'number') inputType = 'number';
+                  else if (dt === 'date') inputType = 'date';
+                }
+                
+                return (
+                  <React.Fragment key={idx}>
+                    <div style={{ fontWeight: 'bold' }}>
+                      {field.label} {field.mandatory && <span style={{color: 'red'}}>*</span>}
+                    </div>
+                    {isDropdown ? (
+                      <select
+                        style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+                        required={field.mandatory}
+                        value={categoryInputValues[field.label] || ''}
+                        onChange={e => setCategoryInputValues({...categoryInputValues, [field.label]: e.target.value})}
+                      >
+                        <option value="">Select...</option>
+                        <option value="Mock Option 1">Mock Option 1</option>
+                        <option value="Mock Option 2">Mock Option 2</option>
+                        <option value="Mock Option 3">Mock Option 3</option>
+                      </select>
+                    ) : (
+                      <input
+                        style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+                        type={inputType}
+                        required={field.mandatory}
+                        value={categoryInputValues[field.label] || ''}
+                        onChange={e => setCategoryInputValues({...categoryInputValues, [field.label]: e.target.value})}
+                        maxLength={field.max_length || undefined}
+                        minLength={field.min_length || undefined}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         )}
