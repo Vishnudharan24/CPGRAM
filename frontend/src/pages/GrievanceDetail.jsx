@@ -12,6 +12,9 @@ export default function GrievanceDetail({ id }) {
   
   const [atrContent, setAtrContent] = useState('Matter has been resolved as per rules. No further action is required.')
   const [atrFile, setAtrFile] = useState(null)
+  
+  const [decisionAction, setDecisionAction] = useState('accept')
+  const [decisionRemarks, setDecisionRemarks] = useState('')
 
   async function load() {
     try {
@@ -41,6 +44,15 @@ export default function GrievanceDetail({ id }) {
     }
   }
 
+  async function submitDecision() {
+    setError('')
+    try {
+      setItem(await api(`/grievances/${id}/appeal-decision`, { method: 'POST', body: JSON.stringify({ action: decisionAction, remarks: decisionRemarks }) }))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   async function fileAtr() {
     setError('')
     try {
@@ -61,7 +73,7 @@ export default function GrievanceDetail({ id }) {
   if (error) return <section className="panel"><p className="error">{error}</p></section>
   if (!item) return <section className="panel"><p>Loading...</p></section>
 
-  const isOfficer = user?.role === 'gro' || user?.role === 'npg' || user?.role === 'admin'
+  const isOfficer = ['gro', 'npg', 'admin', 'appellate_authority'].includes(user?.role)
   const canFileAtr = isOfficer && !['resolved', 'closed', 'appeal_open', 'appeal_resolved'].includes(item.status)
 
   return (
@@ -124,10 +136,17 @@ export default function GrievanceDetail({ id }) {
             </div>
           )}
           
-          {!isOfficer && item.status === 'appeal_open' && (
+          {!isOfficer && item.status === 'appeal_open' && !item.appeal_text && (
             <div className="stack">
               <label>Appeal text<textarea rows={4} value={appealText} onChange={(e) => setAppealText(e.target.value)} /></label>
               <button className="primary" onClick={appeal}>File appeal</button>
+            </div>
+          )}
+
+          {!isOfficer && item.status === 'appeal_open' && item.appeal_text && (
+            <div className="panel" style={{ marginTop: '1rem', background: 'var(--surface)' }}>
+              <p style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}><strong>Appeal sent successfully.</strong> The Appellate Authority is reviewing your case.</p>
+              <p><strong>Your Appeal:</strong> {item.appeal_text}</p>
             </div>
           )}
           
@@ -141,6 +160,31 @@ export default function GrievanceDetail({ id }) {
                 <input type="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.txt" onChange={(e) => setAtrFile(e.target.files[0])} />
               </label>
               <button className="primary" onClick={fileAtr} disabled={!atrContent}>File ATR and resolve</button>
+            </div>
+          )}
+
+          {user?.role === 'appellate_authority' && item.status === 'appeal_open' && (
+            <div className="stack" style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+              <h3>Appeal Decision</h3>
+              <p><strong>Citizen Appeal:</strong> {item.appeal_text || 'No appeal text provided yet.'}</p>
+              <label>Decision
+                <select value={decisionAction} onChange={(e) => setDecisionAction(e.target.value)}>
+                  <option value="accept">Accept (Return to GRO)</option>
+                  <option value="reject">Reject (Close Grievance)</option>
+                </select>
+              </label>
+              <label>Remarks
+                <textarea rows={4} value={decisionRemarks} onChange={(e) => setDecisionRemarks(e.target.value)} />
+              </label>
+              <button className="primary" onClick={submitDecision} disabled={!decisionRemarks}>Submit Decision</button>
+            </div>
+          )}
+
+          {item.appeal_decision && (
+            <div className="panel" style={{ marginTop: '1rem', background: 'var(--surface)' }}>
+              <h3>Appeal Outcome</h3>
+              <p><strong>Appeal:</strong> {item.appeal_text}</p>
+              <p><strong>Decision:</strong> {item.appeal_decision}</p>
             </div>
           )}
         </div>

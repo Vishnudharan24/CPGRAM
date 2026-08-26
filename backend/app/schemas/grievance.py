@@ -104,6 +104,8 @@ class GrievanceListItem(BaseModel):
     category_path: str | None = None
     category_input_values: dict = {}
     review_windows: list[ReviewWindowRead] = []
+    appeal_text: str | None = None
+    appeal_decision: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -111,8 +113,6 @@ class GrievanceListItem(BaseModel):
 class GrievanceDetail(GrievanceListItem):
     events: list[EventRead] = []
     atrs: list[ATRRead] = []
-    appeal_text: str | None = None
-    appeal_decision: str | None = None
 
 
 class RateRequest(BaseModel):
@@ -128,5 +128,8 @@ class ATRCreate(BaseModel):
     mark_resolved: bool = True
 
 
-class AppealDecision(BaseModel):
-    decision: str
+from pydantic import BaseModel, Field
+
+class AppealDecisionRequest(BaseModel):
+    action: str = Field(..., pattern="^(accept|reject)$")
+    remarks: str

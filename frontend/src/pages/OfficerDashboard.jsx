@@ -66,7 +66,12 @@ export default function OfficerDashboard({ navigate }) {
   const isUsersTab = window.location.pathname === '/officer/users'
 
   const displayedGrievances = filter 
-    ? grievances.filter(g => g.category === filter) 
+    ? grievances.filter(g => {
+        if (filter === 'appeal_pending') return g.appeal_text && !g.appeal_decision;
+        if (filter === 'appeal_accepted') return g.appeal_decision?.includes('[ACCEPT]');
+        if (filter === 'appeal_rejected') return g.appeal_decision?.includes('[REJECT]');
+        return g.category === filter;
+      })
     : grievances
 
   return (
@@ -86,6 +91,7 @@ export default function OfficerDashboard({ navigate }) {
             <label>Email <input required type="email" value={newOfficer.email} onChange={e => setNewOfficer({...newOfficer, email: e.target.value})} /></label>
             <label>Role <select value={newOfficer.role} onChange={e => setNewOfficer({...newOfficer, role: e.target.value})}>
                 {user.role === 'admin' && <option value="npg">NPG</option>}
+                <option value="appellate_authority">Appellate Authority</option>
                 <option value="gro">GRO</option>
             </select></label>
             {user.role === 'admin' && (
@@ -115,7 +121,7 @@ export default function OfficerDashboard({ navigate }) {
         </div>
       )}
 
-      {!isUsersTab && (user.role === 'admin' || user.role === 'npg' || user.role === 'gro') && (
+      {!isUsersTab && (user.role === 'admin' || user.role === 'npg' || user.role === 'gro' || user.role === 'appellate_authority') && (
         <>
           <div className="summary-row" style={{ cursor: 'pointer' }}>
             <div onClick={() => setFilter(filter === 'grievance' ? null : 'grievance')} className={filter === 'grievance' ? 'active-filter' : ''}>
@@ -128,12 +134,26 @@ export default function OfficerDashboard({ navigate }) {
               <strong>{summary?.by_category?.suggestion ?? 0}</strong><span>Suggestions</span>
             </div>
           </div>
+
+          {(user.role === 'admin' || user.role === 'appellate_authority') && (
+            <div className="summary-row" style={{ cursor: 'pointer', marginTop: '1rem' }}>
+              <div onClick={() => setFilter(filter === 'appeal_pending' ? null : 'appeal_pending')} className={filter === 'appeal_pending' ? 'active-filter' : ''}>
+                <strong>{summary?.appeals_pending ?? 0}</strong><span>Pending Appeals</span>
+              </div>
+              <div onClick={() => setFilter(filter === 'appeal_accepted' ? null : 'appeal_accepted')} className={filter === 'appeal_accepted' ? 'active-filter' : ''}>
+                <strong style={{color: 'var(--primary)'}}>{summary?.appeals_accepted ?? 0}</strong><span>Accepted</span>
+              </div>
+              <div onClick={() => setFilter(filter === 'appeal_rejected' ? null : 'appeal_rejected')} className={filter === 'appeal_rejected' ? 'active-filter' : ''}>
+                <strong style={{color: 'var(--red)'}}>{summary?.appeals_rejected ?? 0}</strong><span>Rejected</span>
+              </div>
+            </div>
+          )}
           
           <div className="section-head">
             <div>
               <p className="eyebrow">{user.role.toUpperCase()} View</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <h1 style={{ margin: 0 }}>{filter ? `Showing ${filter}s` : 'All items'}</h1>
+                <h1 style={{ margin: 0 }}>{filter ? `Showing ${filter.replace('_', ' ')}s` : 'All items'}</h1>
                 {filter && (
                   <button className="secondary" onClick={() => setFilter(null)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem', alignSelf: 'center' }}>
                     Show All

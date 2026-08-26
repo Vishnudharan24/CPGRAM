@@ -12,9 +12,9 @@ router = APIRouter(prefix="/officer-accounts", tags=["officers_management"])
 @router.post("", response_model=OfficerRead)
 def create_officer(payload: OfficerCreate, db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.admin, UserRole.npg))):
     if user.role == UserRole.npg:
-        # NPGs can only create GROs in their own org
-        if payload.role != UserRole.gro:
-            raise HTTPException(status_code=403, detail="NPGs can only create GRO accounts")
+        # NPGs can only create GROs and AAs in their own org
+        if payload.role not in (UserRole.gro, UserRole.appellate_authority):
+            raise HTTPException(status_code=403, detail="NPGs can only create GRO or Appellate Authority accounts")
         if payload.organization_code != user.organization_code:
             raise HTTPException(status_code=403, detail="Cannot create officers for other organizations")
             
@@ -38,7 +38,7 @@ def create_officer(payload: OfficerCreate, db: Session = Depends(get_db), user: 
 
 @router.get("", response_model=list[OfficerRead])
 def list_officers(db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.admin, UserRole.npg))):
-    stmt = select(User).where(User.role.in_([UserRole.npg, UserRole.gro, UserRole.officer]))
+    stmt = select(User).where(User.role.in_([UserRole.npg, UserRole.gro, UserRole.officer, UserRole.appellate_authority]))
     if user.role == UserRole.npg:
         stmt = stmt.where(User.organization_code == user.organization_code)
     return db.scalars(stmt).all()
