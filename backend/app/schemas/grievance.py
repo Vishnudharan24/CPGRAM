@@ -35,6 +35,14 @@ class GrievanceCreate(BaseModel):
     raw_description: str
     category: GrievanceCategory
     organization_code: str
+    category_code: str | None = None
+    parent_category_code: str | None = None
+    category_name: str | None = None
+    category_path: str | None = None
+    category_stage: int | None = None
+    field_set_id: str | None = None
+    category_input_values: dict = {}
+    destination_routing_codes: str | None = None
 
 
 class EventRead(BaseModel):
@@ -81,6 +89,8 @@ class GrievanceListItem(BaseModel):
     current_department: DepartmentRead
     created_at: datetime
     updated_at: datetime
+    category_path: str | None = None
+    category_input_values: dict = {}
     review_windows: list[ReviewWindowRead] = []
 
     model_config = {"from_attributes": True}

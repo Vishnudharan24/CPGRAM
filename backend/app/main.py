@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import Base, SessionLocal, engine
-from app.routers import admin, auth, dashboard, grievances, officers
+from app.routers import admin, auth, dashboard, grievances, officers, categories
 from app.services.seed_mock_data import seed
 from app.services.sla_engine import evaluate_open_windows
 
@@ -23,6 +23,7 @@ app.include_router(grievances.router, prefix="/api")
 app.include_router(officers.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(categories.router, prefix="/api")
 
 scheduler = BackgroundScheduler()
 

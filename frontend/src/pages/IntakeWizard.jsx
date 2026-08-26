@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, Building2, Send } from 'lucide-react'
+import { ArrowRight, Building2, Send, ChevronRight } from 'lucide-react'
 import { api } from '../api/client.js'
 import ClassificationCard from '../components/ClassificationCard.jsx'
 
@@ -12,6 +12,12 @@ export default function IntakeWizard({ navigate }) {
   const [organizationCode, setOrganizationCode] = useState('')
   const [submitted, setSubmitted] = useState(null)
   const [error, setError] = useState('')
+
+  // Step 4 state
+  const [hierarchy, setHierarchy] = useState([])
+  const [selectedHierarchy, setSelectedHierarchy] = useState({})
+  const [finalCategory, setFinalCategory] = useState(null)
+  const [categoryInputValues, setCategoryInputValues] = useState({})
 
   useEffect(() => {
     api('/grievances/organizations')
@@ -31,10 +37,77 @@ export default function IntakeWizard({ navigate }) {
     }
   }
 
+  async function fetchCategories(orgCode) {
+    try {
+      const data = await api(`/organisations/${orgCode}/categories`)
+      setHierarchy(data)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const MAX_LEVEL = 7;
+  function getOptionsForLevel(level) {
+    if (!hierarchy.length) return [];
+    let filtered = hierarchy;
+    for (let i = 1; i < level; i++) {
+       const key = i === 1 ? 'level_1_category' : `level_${i}_subcategory`;
+       if (selectedHierarchy[i]) {
+         filtered = filtered.filter(item => item[key] === selectedHierarchy[i]);
+       }
+    }
+    const currentKey = level === 1 ? 'level_1_category' : `level_${level}_subcategory`;
+    const options = new Set(filtered.map(item => item[currentKey]).filter(Boolean));
+    return Array.from(options);
+  }
+
+  function handleHierarchySelect(level, value) {
+    const newSelected = { ...selectedHierarchy };
+    // clear subsequent levels
+    for (let i = level; i <= MAX_LEVEL; i++) {
+      delete newSelected[i];
+    }
+    newSelected[level] = value;
+    setSelectedHierarchy(newSelected);
+    
+    // check if this is a leaf node
+    const currentKey = level === 1 ? 'level_1_category' : `level_${level}_subcategory`;
+    const leafItem = hierarchy.find(item => {
+      let match = true;
+      for (let i = 1; i <= level; i++) {
+         const k = i === 1 ? 'level_1_category' : `level_${i}_subcategory`;
+         if (item[k] !== (i === level ? value : selectedHierarchy[i])) match = false;
+      }
+      return match && item.is_leaf_category === 'Yes';
+    });
+    
+    if (leafItem) {
+      setFinalCategory(leafItem);
+    } else {
+      setFinalCategory(null);
+    }
+  }
+
   async function submit() {
     setError('')
     try {
-      const result = await api('/grievances', { method: 'POST', body: JSON.stringify({ raw_description: description, category, organization_code: organizationCode }) })
+      const payload = { 
+        raw_description: description, 
+        category, 
+        organization_code: organizationCode 
+      };
+      if (finalCategory) {
+        payload.category_code = finalCategory.category_code;
+        payload.parent_category_code = finalCategory.parent_category_code;
+        payload.category_name = finalCategory.category_name;
+        payload.category_path = finalCategory.category_path;
+        payload.category_stage = parseInt(finalCategory.stage) || null;
+        payload.field_set_id = finalCategory.field_set_id;
+        payload.destination_routing_codes = finalCategory.destination_routing_codes;
+        payload.category_input_values = categoryInputValues;
+      }
+
+      const result = await api('/grievances', { method: 'POST', body: JSON.stringify(payload) })
       setSubmitted(result)
     } catch (err) {
       setError(err.message)
@@ -69,7 +142,7 @@ export default function IntakeWizard({ navigate }) {
         <ClassificationCard result={classification} selected={category} onChange={setCategory} />
         <button className="primary" disabled={!classification} onClick={() => setStep(3)}><ArrowRight size={18} />Choose organisation</button>
       </div>}
-      {step === 3 && <div className="panel organization-panel">
+      {step >= 3 && <div className="panel organization-panel">
         <p className="eyebrow">Step 3</p>
         <h1>Select organisation</h1>
         <p className="muted">Choose the organisation your grievance concerns.</p>
@@ -86,8 +159,91 @@ export default function IntakeWizard({ navigate }) {
             </button>
           ))}
         </div>
-        {error && <p className="error">{error}</p>}
-        <button className="primary" disabled={!organizationCode} onClick={submit}><Send size={18} />Submit grievance</button>
+        {step === 3 && (
+          <button className="primary" disabled={!organizationCode} onClick={() => {
+            setStep(4);
+            fetchCategories(organizationCode);
+          }}><ArrowRight size={18} />Choose sub-category</button>
+        )}
+      </div>}
+      
+      {step >= 4 && <div className="panel">
+        <p className="eyebrow">Step 4</p>
+        <h1>Category Details</h1>
+        <p className="muted">Select the specific nature of your grievance.</p>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+          {[1, 2, 3, 4, 5, 6, 7].map(level => {
+            const options = getOptionsForLevel(level);
+            if (options.length === 0) return null;
+            return (
+              <label key={level}>
+                Level {level} Category
+                <select 
+                  value={selectedHierarchy[level] || ''} 
+                  onChange={(e) => handleHierarchySelect(level, e.target.value)}
+                >
+                  <option value="">Select option...</option>
+                  {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              </label>
+            )
+          })}
+        </div>
+
+        {finalCategory && finalCategory.parsed_input_fields && finalCategory.parsed_input_fields.length > 0 && (
+          <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--surface-variant)', borderRadius: '8px' }}>
+            <h3>Additional Details Required</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              {finalCategory.parsed_input_fields.map((field, idx) => (
+                <label key={idx}>
+                  {field.label} {field.required && <span style={{color: 'red'}}>*</span>}
+                  {field.type && field.type.toLowerCase() === 'dropdown' ? (
+                    <select
+                      required={field.required}
+                      value={categoryInputValues[field.label] || ''}
+                      onChange={e => setCategoryInputValues({...categoryInputValues, [field.label]: e.target.value})}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      required={field.required}
+                      value={categoryInputValues[field.label] || ''}
+                      onChange={e => setCategoryInputValues({...categoryInputValues, [field.label]: e.target.value})}
+                    />
+                  )}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {finalCategory && (
+          <div style={{ marginTop: '2rem', padding: '1rem', border: '1px solid var(--border)', borderRadius: '8px' }}>
+             <h4>Summary</h4>
+             <p><strong>Organisation:</strong> {organizations.find(o => o.code === organizationCode)?.name}</p>
+             <p><strong>Category Path:</strong> {finalCategory.category_path}</p>
+             {finalCategory.destination_routing_codes && (
+                <p><strong>Routing code:</strong> {finalCategory.destination_routing_codes}</p>
+             )}
+          </div>
+        )}
+
+        {error && <p className="error" style={{marginTop: '1rem'}}>{error}</p>}
+        
+        <button 
+          className="primary" 
+          disabled={!finalCategory} 
+          onClick={submit} 
+          style={{marginTop: '1.5rem'}}
+        >
+          <Send size={18} /> Submit grievance
+        </button>
       </div>}
     </section>
   )

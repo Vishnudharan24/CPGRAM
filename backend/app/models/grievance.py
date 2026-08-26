@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, Integer
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import GrievanceCategory, GrievanceStatus, Rating
@@ -19,8 +20,19 @@ class Grievance(Base):
     organization_name: Mapped[str] = mapped_column(String(240), nullable=False)
     organization_code: Mapped[str] = mapped_column(String(20), nullable=False)
     category: Mapped[GrievanceCategory] = mapped_column(Enum(GrievanceCategory), nullable=False)
+    
+    # Step 4 Category & Sub-category selection
+    category_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    parent_category_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    category_name: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    category_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category_stage: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    field_set_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    category_input_values: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    destination_routing_codes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
     status: Mapped[GrievanceStatus] = mapped_column(Enum(GrievanceStatus), nullable=False, default=GrievanceStatus.submitted)
-    citizen_rating: Mapped[Rating] = mapped_column(Enum(Rating), nullable=True)
+    citizen_rating: Mapped[Rating | None] = mapped_column(Enum(Rating), nullable=True)
     appeal_text: Mapped[str] = mapped_column(Text, nullable=True)
     appeal_decision: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

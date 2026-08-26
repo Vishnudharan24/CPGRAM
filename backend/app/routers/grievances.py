@@ -67,6 +67,14 @@ def create_grievance(payload: GrievanceCreate, db: Session = Depends(get_db), us
         organization_name=organization["name"],
         organization_code=organization["code"],
         category=payload.category,
+        category_code=payload.category_code,
+        parent_category_code=payload.parent_category_code,
+        category_name=payload.category_name,
+        category_path=payload.category_path,
+        category_stage=payload.category_stage,
+        field_set_id=payload.field_set_id,
+        category_input_values=payload.category_input_values,
+        destination_routing_codes=payload.destination_routing_codes,
         status=GrievanceStatus.submitted,
     )
     db.add(grievance)

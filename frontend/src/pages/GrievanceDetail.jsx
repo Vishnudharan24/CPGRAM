@@ -47,7 +47,20 @@ export default function GrievanceDetail({ id }) {
           <p className="eyebrow">{item.registration_id}</p>
           <h1>{item.category} · {item.status.replace('_', ' ')}</h1>
           <p className="muted">Organisation: <strong>{item.organization_name}</strong> ({item.organization_code})</p>
+          {item.category_path && (
+            <p className="muted">Category Path: <strong>{item.category_path}</strong></p>
+          )}
           <p>{item.raw_description}</p>
+          {item.category_input_values && Object.keys(item.category_input_values).length > 0 && (
+            <div className="muted" style={{ marginTop: '0.5rem' }}>
+              <strong>Additional Details:</strong>
+              <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
+                {Object.entries(item.category_input_values).map(([key, value]) => (
+                  <li key={key}><strong>{key}:</strong> {value}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         <SLAClock windows={item.review_windows} />
       </div>
