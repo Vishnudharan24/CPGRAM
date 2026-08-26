@@ -4,9 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import Base, SessionLocal, engine
-from app.routers import admin, auth, dashboard, grievances, officers, categories
+import os
+from fastapi.staticfiles import StaticFiles
+from app.routers import admin, auth, dashboard, grievances, officers, categories, officer_accounts
+
 from app.services.seed_mock_data import seed
 from app.services.sla_engine import evaluate_open_windows
+
+os.makedirs("uploads", exist_ok=True)
 
 app = FastAPI(title="CPGRAMS Guided Grievance Router", version="0.1.0")
 
@@ -24,6 +29,9 @@ app.include_router(officers.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
+app.include_router(officer_accounts.router, prefix="/api")
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 scheduler = BackgroundScheduler()
 

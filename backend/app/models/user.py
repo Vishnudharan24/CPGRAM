@@ -23,6 +23,8 @@ class User(Base):
     district: Mapped[str | None] = mapped_column(String(100), nullable=True)
     pincode: Mapped[str | None] = mapped_column(String(20), nullable=True)
     mobile_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    organization_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    level: Mapped[str | None] = mapped_column(String(20), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     phone: Mapped[str] = mapped_column(String(40), nullable=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)

@@ -52,6 +52,9 @@ def get_categories_for_org(org_code: str):
         # Since we don't have the org name easily here, we'll just skip the first part if it is at stage 1 or if we see the pattern.
         # Actually, let's just use the parts starting from index 1 if the first part is the same for all items in the org.
         
+        if len(parts) == 1 and not is_leaf:
+            continue
+            
         root_name = parts[0]
         # We'll assign levels starting from the actual categories.
         # If the root_name is the only thing, it's stage 1.

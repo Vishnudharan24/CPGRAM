@@ -71,12 +71,15 @@ export default function IntakeWizard({ navigate }) {
     setSelectedHierarchy(newSelected);
     
     // check if this is a leaf node
-    const currentKey = level === 1 ? 'level_1_category' : `level_${level}_subcategory`;
     const leafItem = hierarchy.find(item => {
       let match = true;
-      for (let i = 1; i <= level; i++) {
+      for (let i = 1; i <= MAX_LEVEL; i++) {
          const k = i === 1 ? 'level_1_category' : `level_${i}_subcategory`;
-         if (item[k] !== (i === level ? value : selectedHierarchy[i])) match = false;
+         if (i <= level) {
+             if (item[k] !== (i === level ? value : selectedHierarchy[i])) match = false;
+         } else {
+             if (item[k]) match = false;
+         }
       }
       return match && item.is_leaf_category === 'Yes';
     });

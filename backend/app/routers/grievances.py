@@ -102,19 +102,23 @@ def create_grievance(payload: GrievanceCreate, db: Session = Depends(get_db), us
 
 
 @router.get("", response_model=list[GrievanceListItem])
-def list_grievances(db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin))):
+def list_grievances(db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin, UserRole.npg, UserRole.gro))):
     stmt = select(Grievance).options(selectinload(Grievance.current_department), selectinload(Grievance.review_windows)).order_by(Grievance.updated_at.desc())
     if user.role == UserRole.citizen:
         stmt = stmt.where(Grievance.citizen_id == user.id)
+    elif user.role in (UserRole.npg, UserRole.gro):
+        stmt = stmt.where(Grievance.organization_code == user.organization_code)
     return db.scalars(stmt).all()
 
 
 @router.get("/{grievance_id}", response_model=GrievanceDetail)
-def get_grievance(grievance_id: UUID, db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin))):
+def get_grievance(grievance_id: UUID, db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin, UserRole.npg, UserRole.gro))):
     grievance = _load_grievance(db, grievance_id)
     if not grievance:
         raise HTTPException(status_code=404, detail="Grievance not found")
     _ensure_owner_or_staff(grievance, user)
+    if user.role in (UserRole.npg, UserRole.gro) and grievance.organization_code != user.organization_code:
+        raise HTTPException(status_code=403, detail="Not authorized to view this grievance")
     return grievance
 
 

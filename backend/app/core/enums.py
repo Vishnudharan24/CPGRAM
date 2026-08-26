@@ -5,6 +5,9 @@ class UserRole(str, Enum):
     citizen = "citizen"
     officer = "officer"
     admin = "admin"
+    npg = "npg"
+    gro = "gro"
+    appellate_authority = "appellate_authority"
 
 
 class DepartmentLevel(str, Enum):
@@ -42,6 +45,9 @@ class ActorRole(str, Enum):
     officer = "officer"
     system = "system"
     admin = "admin"
+    npg = "npg"
+    gro = "gro"
+    appellate_authority = "appellate_authority"
 
 
 class ATRQuality(str, Enum):

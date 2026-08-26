@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react'
-import { api, formatDateTime } from '../api/client.js'
+import { api, formatDateTime, getUser } from '../api/client.js'
 import ATRQualityBadge from '../components/ATRQualityBadge.jsx'
 import RoutingTrail from '../components/RoutingTrail.jsx'
 import SLAClock from '../components/SLAClock.jsx'
 
 export default function GrievanceDetail({ id }) {
+  const user = getUser()
   const [item, setItem] = useState(null)
   const [appealText, setAppealText] = useState('The ATR is generic and does not address the exact facts of my case.')
   const [error, setError] = useState('')
+  
+  const [atrContent, setAtrContent] = useState('Matter has been resolved as per rules. No further action is required.')
+  const [atrFile, setAtrFile] = useState(null)
 
   async function load() {
     try {
@@ -37,8 +41,28 @@ export default function GrievanceDetail({ id }) {
     }
   }
 
+  async function fileAtr() {
+    setError('')
+    try {
+      const formData = new FormData()
+      formData.append('content', atrContent)
+      formData.append('mark_resolved', 'true')
+      if (atrFile) {
+        formData.append('files', atrFile)
+      }
+      setItem(await api(`/grievances/${id}/atr`, { method: 'POST', body: formData }))
+      setAtrContent('')
+      setAtrFile(null)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   if (error) return <section className="panel"><p className="error">{error}</p></section>
   if (!item) return <section className="panel"><p>Loading...</p></section>
+
+  const isOfficer = user?.role === 'gro' || user?.role === 'npg' || user?.role === 'admin'
+  const canFileAtr = isOfficer && !['resolved', 'closed', 'appeal_open', 'appeal_resolved'].includes(item.status)
 
   return (
     <section className="workspace detail">
@@ -75,10 +99,23 @@ export default function GrievanceDetail({ id }) {
             <article className="atr" key={atr.id}>
               <ATRQualityBadge flag={atr.quality_flag} />
               <p>{atr.content}</p>
+              {atr.attachments && atr.attachments.length > 0 && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <strong>Attachments:</strong>
+                  <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
+                    {atr.attachments.map(att => (
+                      <li key={att.id}>
+                        <a href={`http://localhost:8000${att.file_path}`} target="_blank" rel="noopener noreferrer">{att.file_name}</a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <small>{formatDateTime(atr.created_at)}</small>
             </article>
           )) : <p className="muted">No ATR has been filed yet.</p>}
-          {item.status === 'resolved' && (
+          
+          {!isOfficer && item.status === 'resolved' && (
             <div className="rating-box">
               <p>Rating this resolution <strong>Poor</strong> opens a 30-day appeal window automatically.</p>
               <button onClick={() => rate('good')}>Good</button>
@@ -86,10 +123,24 @@ export default function GrievanceDetail({ id }) {
               <button className="danger" onClick={() => rate('poor')}>Poor</button>
             </div>
           )}
-          {item.status === 'appeal_open' && (
+          
+          {!isOfficer && item.status === 'appeal_open' && (
             <div className="stack">
               <label>Appeal text<textarea rows={4} value={appealText} onChange={(e) => setAppealText(e.target.value)} /></label>
               <button className="primary" onClick={appeal}>File appeal</button>
+            </div>
+          )}
+          
+          {canFileAtr && (
+            <div className="stack" style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+              <h3>Process Grievance (File ATR)</h3>
+              <label>ATR content
+                <textarea rows={4} value={atrContent} onChange={(e) => setAtrContent(e.target.value)} />
+              </label>
+              <label>Supporting Document (Optional)
+                <input type="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.txt" onChange={(e) => setAtrFile(e.target.files[0])} />
+              </label>
+              <button className="primary" onClick={fileAtr} disabled={!atrContent}>File ATR and resolve</button>
             </div>
           )}
         </div>

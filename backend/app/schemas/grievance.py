@@ -57,11 +57,23 @@ class EventRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ATRAttachmentRead(BaseModel):
+    id: UUID
+    file_name: str
+    file_path: str
+    content_type: str
+    file_size: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class ATRRead(BaseModel):
     id: UUID
     content: str
     quality_flag: ATRQuality
     created_at: datetime
+    attachments: list[ATRAttachmentRead] = []
 
     model_config = {"from_attributes": True}
 

@@ -30,6 +30,12 @@ export default function Login({ onLogin }) {
         method: 'POST',
         body: JSON.stringify(form)
       })
+      if (window.location.pathname === '/officer' && session.role === 'citizen') {
+        throw new Error('This login portal is for officers only. Please use the standard citizen login.')
+      }
+      if (window.location.pathname !== '/officer' && session.role !== 'citizen') {
+        throw new Error('This login portal is for citizens only. Please use the officer login.')
+      }
       saveSession(session)
       onLogin()
     } catch (err) {
@@ -39,10 +45,12 @@ export default function Login({ onLogin }) {
 
   return (
     <section className="panel narrow">
-      <div className="segmented">
-        <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Login</button>
-        <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Register</button>
-      </div>
+      {window.location.pathname !== '/officer' && (
+        <div className="segmented">
+          <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Login</button>
+          <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Register</button>
+        </div>
+      )}
       <form onSubmit={submit} className={`stack ${mode === 'register' ? 'registration-form' : ''}`}>
         {mode === 'register' && <>
           <label>Name<input required minLength="2" maxLength="100" autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>

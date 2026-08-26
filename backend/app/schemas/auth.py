@@ -38,3 +38,5 @@ class TokenResponse(BaseModel):
     role: UserRole
     name: str
     email: EmailStr
+    organization_code: str | None = None
+    level: str | None = None

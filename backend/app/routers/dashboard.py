@@ -12,10 +12,13 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/summary")
-def summary(db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin))):
+def summary(db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin, UserRole.npg, UserRole.gro))):
     grievance_stmt = select(Grievance)
     if user.role == UserRole.citizen:
         grievance_stmt = grievance_stmt.where(Grievance.citizen_id == user.id)
+    elif user.role in (UserRole.npg, UserRole.gro):
+        grievance_stmt = grievance_stmt.where(Grievance.organization_code == user.organization_code)
+    
     grievances = db.scalars(grievance_stmt).all()
     ids = [g.id for g in grievances]
     overdue = 0
