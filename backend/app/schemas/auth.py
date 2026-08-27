@@ -10,8 +10,8 @@ class RegisterRequest(BaseModel):
     sub_locality: str = Field(min_length=1)
     locality: str = Field(min_length=1)
     country: str = Field(min_length=1)
-    state: str = Field(min_length=1)
-    district: str = Field(min_length=1)
+    state_code: str = Field(min_length=1)
+    district_code: str = Field(min_length=1)
     pincode: str = Field(min_length=1)
     mobile_number: str = Field(pattern=r"^\d{10}$")
     email: EmailStr

@@ -74,7 +74,7 @@ export default function GrievanceDetail({ id }) {
   if (!item) return <section className="panel"><p>Loading...</p></section>
 
   const isOfficer = ['gro', 'npg', 'admin', 'appellate_authority'].includes(user?.role)
-  const canFileAtr = isOfficer && !['resolved', 'closed', 'appeal_open', 'appeal_resolved'].includes(item.status)
+  const canFileAtr = ['gro', 'npg'].includes(user?.role) && !['resolved', 'closed', 'appeal_open', 'appeal_resolved'].includes(item.status)
 
   return (
     <section className="workspace detail">
@@ -109,7 +109,7 @@ export default function GrievanceDetail({ id }) {
           <h2>Action Taken Report</h2>
           {item.atrs.length ? item.atrs.map((atr) => (
             <article className="atr" key={atr.id}>
-              <ATRQualityBadge flag={atr.quality_flag} />
+              {isOfficer && <ATRQualityBadge flag={atr.quality_flag} />}
               <p>{atr.content}</p>
               {atr.attachments && atr.attachments.length > 0 && (
                 <div style={{ marginTop: '0.5rem' }}>

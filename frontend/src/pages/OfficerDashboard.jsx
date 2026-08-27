@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api, getUser } from '../api/client.js'
 import GrievanceCard from '../components/GrievanceCard.jsx'
+import { STATES } from '../utils/states.js'
+import { DISTRICTS } from '../utils/districts.js'
 
 export default function OfficerDashboard({ navigate }) {
   const user = getUser()
@@ -18,6 +20,8 @@ export default function OfficerDashboard({ navigate }) {
     role: 'gro',
     organization_code: user.organization_code || '',
     level: 'Central',
+    state_code: STATES[0].code,
+    district_code: DISTRICTS.find(d => d.state_code === STATES[0].code)?.code || '',
     password: ''
   })
 
@@ -67,7 +71,7 @@ export default function OfficerDashboard({ navigate }) {
 
   const displayedGrievances = filter 
     ? grievances.filter(g => {
-        if (filter === 'appeal_pending') return g.appeal_text && !g.appeal_decision;
+        if (filter === 'appeal_pending') return g.status === 'appeal_open' && g.appeal_text && !g.appeal_decision;
         if (filter === 'appeal_accepted') return g.appeal_decision?.includes('[ACCEPT]');
         if (filter === 'appeal_rejected') return g.appeal_decision?.includes('[REJECT]');
         return g.category === filter;
@@ -83,26 +87,66 @@ export default function OfficerDashboard({ navigate }) {
         {message && <p className="notice">{message}</p>}
       </div>
 
-      {isUsersTab && (user.role === 'admin' || user.role === 'npg') && (
+      {isUsersTab && ['admin', 'central_admin', 'state_admin', 'ut_admin', 'npg'].includes(user.role) && (
         <div className="panel">
           <h2>Officer Management</h2>
           <form onSubmit={createOfficer} className="stack" style={{ maxWidth: '400px', marginBottom: '2rem' }}>
+            <label>Role Type 
+              <select value={newOfficer.role} onChange={e => setNewOfficer({...newOfficer, role: e.target.value})}>
+                {user.role === 'admin' && (
+                  <>
+                    <option value="central_admin">Central Admin</option>
+                    <option value="state_admin">State Admin</option>
+                    <option value="ut_admin">UT Admin</option>
+                  </>
+                )}
+                {['admin', 'central_admin', 'state_admin', 'ut_admin'].includes(user.role) && (
+                  <option value="npg">NPG / Nodal GRO</option>
+                )}
+                <option value="gro">GRO</option>
+                {user.role === 'npg' && <option value="appellate_authority">Appellate Authority</option>}
+              </select>
+            </label>
+            
+            {['npg', 'gro', 'appellate_authority'].includes(newOfficer.role) && (
+              <label>Administrative Level 
+                <select value={newOfficer.level} onChange={e => setNewOfficer({...newOfficer, level: e.target.value})}>
+                    <option value="Central">Central</option>
+                    <option value="State">State</option>
+                    <option value="District">District</option>
+                </select>
+              </label>
+            )}
+
+            {['state_admin', 'ut_admin'].includes(newOfficer.role) || (['npg', 'gro', 'appellate_authority'].includes(newOfficer.role) && ['State', 'District'].includes(newOfficer.level)) ? (
+              <label>State/UT 
+                <select value={newOfficer.state_code} onChange={e => {
+                    const newDistricts = DISTRICTS.filter(d => d.state_code === e.target.value)
+                    setNewOfficer({...newOfficer, state_code: e.target.value, district_code: newDistricts.length ? newDistricts[0].code : ''})
+                }}>
+                    {STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+                </select>
+              </label>
+            ) : null}
+
+            {['npg', 'gro', 'appellate_authority'].includes(newOfficer.role) && newOfficer.level === 'District' && (
+              <label>District 
+                <select value={newOfficer.district_code} onChange={e => setNewOfficer({...newOfficer, district_code: e.target.value})}>
+                    {DISTRICTS.filter(d => d.state_code === newOfficer.state_code).map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
+                </select>
+              </label>
+            )}
+
+            {['central_admin', 'npg', 'gro', 'appellate_authority'].includes(newOfficer.role) && (
+              <label>Ministry / Department 
+                <select value={newOfficer.organization_code} onChange={e => setNewOfficer({...newOfficer, organization_code: e.target.value})}>
+                    {organizations.map(org => <option key={org.code} value={org.code}>{org.name}</option>)}
+                </select>
+              </label>
+            )}
+
             <label>Name <input required value={newOfficer.name} onChange={e => setNewOfficer({...newOfficer, name: e.target.value})} /></label>
             <label>Email <input required type="email" value={newOfficer.email} onChange={e => setNewOfficer({...newOfficer, email: e.target.value})} /></label>
-            <label>Role <select value={newOfficer.role} onChange={e => setNewOfficer({...newOfficer, role: e.target.value})}>
-                {user.role === 'admin' && <option value="npg">NPG</option>}
-                <option value="appellate_authority">Appellate Authority</option>
-                <option value="gro">GRO</option>
-            </select></label>
-            {user.role === 'admin' && (
-              <label>Organisation <select value={newOfficer.organization_code} onChange={e => setNewOfficer({...newOfficer, organization_code: e.target.value})}>
-                  {organizations.map(org => <option key={org.code} value={org.code}>{org.name}</option>)}
-              </select></label>
-            )}
-            <label>Level <select value={newOfficer.level} onChange={e => setNewOfficer({...newOfficer, level: e.target.value})}>
-                <option value="Central">Central</option>
-                <option value="State">State</option>
-            </select></label>
             <label>Password <input required type="password" value={newOfficer.password} onChange={e => setNewOfficer({...newOfficer, password: e.target.value})} /></label>
             <button type="submit">Create Account</button>
           </form>

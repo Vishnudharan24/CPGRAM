@@ -43,6 +43,8 @@ class GrievanceCreate(BaseModel):
     field_set_id: str | None = None
     category_input_values: dict = {}
     destination_routing_codes: str | None = None
+    state_code: str | None = None
+    district_code: str | None = None
 
 
 class EventRead(BaseModel):

@@ -10,6 +10,8 @@ class OfficerCreate(BaseModel):
     role: UserRole
     organization_code: str
     level: str
+    state_code: str | None = None
+    district_code: str | None = None
     password: str
 
 class OfficerRead(BaseModel):
@@ -20,6 +22,8 @@ class OfficerRead(BaseModel):
     role: UserRole
     organization_code: str | None
     level: str | None
+    state_code: str | None = None
+    district_code: str | None = None
     created_at: datetime
     
     class Config:

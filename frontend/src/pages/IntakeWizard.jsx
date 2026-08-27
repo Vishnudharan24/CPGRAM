@@ -1,17 +1,25 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowRight, Building2, Send, ChevronRight } from 'lucide-react'
-import { api } from '../api/client.js'
+import { ArrowRight, Building2, Send, ChevronRight, MapPin } from 'lucide-react'
+import { api, getUser } from '../api/client.js'
 import ClassificationCard from '../components/ClassificationCard.jsx'
+import { STATES } from '../utils/states.js'
+import { DISTRICTS } from '../utils/districts.js'
 
 export default function IntakeWizard({ navigate }) {
+  const user = getUser()
   const [description, setDescription] = useState('My pension has not been received for three months and the office says the file is pending.')
   const [classification, setClassification] = useState(null)
   const [category, setCategory] = useState('complaint')
   const [step, setStep] = useState(1)
   const [organizations, setOrganizations] = useState([])
   const [organizationCode, setOrganizationCode] = useState('')
+  const [orgSearch, setOrgSearch] = useState('')
   const [submitted, setSubmitted] = useState(null)
   const [error, setError] = useState('')
+  const [grievanceLocation, setGrievanceLocation] = useState({
+    state_code: user?.state_code || STATES[0].code,
+    district_code: user?.district_code || ''
+  })
 
   // Step 4 state
   const [hierarchy, setHierarchy] = useState([])
@@ -97,7 +105,9 @@ export default function IntakeWizard({ navigate }) {
       const payload = { 
         raw_description: description, 
         category, 
-        organization_code: organizationCode 
+        organization_code: organizationCode,
+        state_code: grievanceLocation.state_code,
+        district_code: grievanceLocation.district_code
       };
       if (finalCategory) {
         payload.category_code = finalCategory.category_code;
@@ -148,9 +158,18 @@ export default function IntakeWizard({ navigate }) {
       {step >= 3 && <div className="panel organization-panel">
         <p className="eyebrow">Step 3</p>
         <h1>Select organisation</h1>
-        <p className="muted">Choose the organisation your grievance concerns.</p>
-        <div className="organization-grid">
-          {organizations.map((organization) => (
+        <p className="muted" style={{ marginBottom: '1rem' }}>Choose the organisation your grievance concerns.</p>
+        <div style={{ marginBottom: '1rem' }}>
+          <input 
+            type="text" 
+            placeholder="Search organisation / ministry..." 
+            value={orgSearch} 
+            onChange={(e) => setOrgSearch(e.target.value)} 
+            style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+          />
+        </div>
+        <div className="organization-grid" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+          {organizations.filter(o => o.name.toLowerCase().includes(orgSearch.toLowerCase()) || o.code.toLowerCase().includes(orgSearch.toLowerCase())).map((organization) => (
             <button
               className={`organization-card ${organizationCode === organization.code ? 'selected' : ''}`}
               key={organization.code}
@@ -256,6 +275,40 @@ export default function IntakeWizard({ navigate }) {
              )}
           </div>
         )}
+
+        <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <MapPin size={20} className="primary" />
+            <h3 style={{ margin: 0 }}>Grievance Location</h3>
+          </div>
+          <p className="muted" style={{ marginBottom: '1rem' }}>Please confirm the geographic location this grievance pertains to (defaults to your registered address).</p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, max-content) 1fr', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+            <div style={{ fontWeight: 'bold' }}>State <span style={{color: 'red'}}>*</span></div>
+            <select 
+              value={grievanceLocation.state_code} 
+              onChange={e => {
+                  const newDistricts = DISTRICTS.filter(d => d.state_code === e.target.value);
+                  setGrievanceLocation({...grievanceLocation, state_code: e.target.value, district_code: newDistricts.length ? newDistricts[0].code : ''});
+              }}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+            >
+                {STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+            </select>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, max-content) 1fr', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ fontWeight: 'bold' }}>District</div>
+            <select 
+              value={grievanceLocation.district_code} 
+              onChange={e => setGrievanceLocation({...grievanceLocation, district_code: e.target.value})}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+            >
+                <option value="">Select District (Optional)</option>
+                {DISTRICTS.filter(d => d.state_code === grievanceLocation.state_code).map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
+            </select>
+          </div>
+        </div>
 
         {error && <p className="error" style={{marginTop: '1rem'}}>{error}</p>}
         

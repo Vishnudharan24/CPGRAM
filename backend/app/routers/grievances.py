@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.enums import ActorRole, GrievanceStatus, Rating, UserRole, WindowType
+from app.core.enums import ActorRole, GrievanceStatus, Rating, UserRole, WindowType, WindowStatus
+from app.core.rbac import apply_rbac_filter
 from app.deps import get_db, require_role
 from app.models.grievance import Grievance
 from app.models.grievance_event import GrievanceEvent
@@ -76,6 +77,8 @@ def create_grievance(payload: GrievanceCreate, db: Session = Depends(get_db), us
         category_input_values=payload.category_input_values,
         destination_routing_codes=payload.destination_routing_codes,
         status=GrievanceStatus.submitted,
+        state_code=payload.state_code or user.state_code,
+        district_code=payload.district_code or user.district_code,
     )
     db.add(grievance)
     db.flush()
@@ -103,13 +106,11 @@ def create_grievance(payload: GrievanceCreate, db: Session = Depends(get_db), us
 
 @router.get("", response_model=list[GrievanceListItem])
 def list_grievances(db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin, UserRole.npg, UserRole.gro, UserRole.appellate_authority))):
-    stmt = select(Grievance).options(selectinload(Grievance.current_department), selectinload(Grievance.review_windows)).order_by(Grievance.updated_at.desc())
-    if user.role == UserRole.citizen:
-        stmt = stmt.where(Grievance.citizen_id == user.id)
-    elif user.role in (UserRole.npg, UserRole.gro, UserRole.appellate_authority):
-        stmt = stmt.where(Grievance.organization_code == user.organization_code)
-        if user.role == UserRole.appellate_authority:
-            stmt = stmt.where(Grievance.appeal_text.is_not(None))
+    stmt = apply_rbac_filter(select(Grievance).options(selectinload(Grievance.current_department), selectinload(Grievance.review_windows)).order_by(Grievance.updated_at.desc()), user)
+    
+    if user.role == UserRole.appellate_authority:
+        stmt = stmt.where(Grievance.appeal_text.is_not(None))
+        
     return db.scalars(stmt).all()
 
 
@@ -118,9 +119,11 @@ def get_grievance(grievance_id: UUID, db: Session = Depends(get_db), user: User 
     grievance = _load_grievance(db, grievance_id)
     if not grievance:
         raise HTTPException(status_code=404, detail="Grievance not found")
-    _ensure_owner_or_staff(grievance, user)
-    if user.role in (UserRole.npg, UserRole.gro, UserRole.appellate_authority) and grievance.organization_code != user.organization_code:
+    # Enforce RBAC
+    authorized = db.scalar(apply_rbac_filter(select(Grievance).where(Grievance.id == grievance_id), user))
+    if not authorized:
         raise HTTPException(status_code=403, detail="Not authorized to view this grievance")
+        
     return grievance
 
 
@@ -136,6 +139,11 @@ def rate_grievance(grievance_id: UUID, payload: RateRequest, db: Session = Depen
         open_appeal_window(db, grievance.id)
     else:
         grievance.status = GrievanceStatus.closed
+        # Close any lingering open windows since the citizen is satisfied
+        for window in grievance.review_windows:
+            if window.status == WindowStatus.open:
+                window.status = WindowStatus.met
+                window.closed_at = utcnow()
     db.add(GrievanceEvent(grievance_id=grievance.id, event_type="rated", actor_role=ActorRole.citizen, payload={"rating": payload.rating.value}))
     db.commit()
     return _load_grievance(db, grievance.id)

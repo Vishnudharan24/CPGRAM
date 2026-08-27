@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { api, saveSession } from '../api/client.js'
+import { STATES } from '../utils/states.js'
+import { DISTRICTS } from '../utils/districts.js'
 
 export default function Login({ onLogin }) {
   const [mode, setMode] = useState('login')
@@ -10,8 +12,8 @@ export default function Login({ onLogin }) {
     sub_locality: '',
     locality: '',
     country: 'India',
-    state: '',
-    district: '',
+    state_code: STATES[0].code,
+    district_code: DISTRICTS.find(d => d.state_code === STATES[0].code)?.code || '',
     pincode: '',
     mobile_number: '',
     phone: '',
@@ -65,9 +67,16 @@ export default function Login({ onLogin }) {
             <label>Premise name<input required value={form.premise_name} onChange={(e) => setForm({ ...form, premise_name: e.target.value })} /></label>
             <label>Sub-locality<input required value={form.sub_locality} onChange={(e) => setForm({ ...form, sub_locality: e.target.value })} /></label>
             <label>Locality<input required value={form.locality} onChange={(e) => setForm({ ...form, locality: e.target.value })} /></label>
-            <label>Country<input required autoComplete="country-name" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></label>
-            <label>State<input required autoComplete="address-level1" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></label>
-            <label>District<input required value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} /></label>
+            <label>Country <input required value={form.country} onChange={e => setForm({...form, country: e.target.value})} /></label>
+            <label>State <select value={form.state_code} onChange={e => {
+                const newDistricts = DISTRICTS.filter(d => d.state_code === e.target.value)
+                setForm({...form, state_code: e.target.value, district_code: newDistricts.length ? newDistricts[0].code : ''})
+            }}>
+                {STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+            </select></label>
+            <label>District <select required value={form.district_code} onChange={e => setForm({...form, district_code: e.target.value})}>
+                {DISTRICTS.filter(d => d.state_code === form.state_code).map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
+            </select></label>
             <label>Pincode<input required inputMode="numeric" autoComplete="postal-code" value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} /></label>
           </div>
           <label>Mobile number<input required inputMode="numeric" pattern="[0-9]{10}" maxLength="10" autoComplete="tel" value={form.mobile_number} onChange={(e) => setForm({ ...form, mobile_number: e.target.value })} /></label>

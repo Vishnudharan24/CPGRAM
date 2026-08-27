@@ -19,6 +19,8 @@ class Grievance(Base):
     raw_description: Mapped[str] = mapped_column(Text, nullable=False)
     organization_name: Mapped[str] = mapped_column(String(240), nullable=False)
     organization_code: Mapped[str] = mapped_column(String(20), nullable=False)
+    state_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    district_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     category: Mapped[GrievanceCategory] = mapped_column(Enum(GrievanceCategory), nullable=False)
     
     # Step 4 Category & Sub-category selection
