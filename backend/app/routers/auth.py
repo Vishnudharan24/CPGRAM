@@ -35,7 +35,14 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     token = create_access_token(str(user.id), user.role.value)
-    return TokenResponse(access_token=token, role=user.role, name=user.name, email=user.email)
+    return TokenResponse(
+        access_token=token, 
+        role=user.role, 
+        name=user.name, 
+        email=user.email,
+        state_code=user.state_code,
+        district_code=user.district_code,
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -50,5 +57,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         name=user.name, 
         email=user.email,
         organization_code=user.organization_code,
-        level=user.level
+        level=user.level,
+        state_code=user.state_code,
+        district_code=user.district_code
     )

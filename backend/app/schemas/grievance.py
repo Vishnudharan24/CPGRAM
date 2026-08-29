@@ -31,6 +31,17 @@ class OrganizationRead(BaseModel):
     code: str
 
 
+class SuggestionRequest(BaseModel):
+    description: str
+
+
+class SuggestionResponse(BaseModel):
+    organization_code: str | None = None
+    category_path: str | None = None
+    category_code: str | None = None
+    suggestion_text: str | None = None
+
+
 class GrievanceCreate(BaseModel):
     raw_description: str
     category: GrievanceCategory

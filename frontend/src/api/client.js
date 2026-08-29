@@ -6,7 +6,13 @@ export function getToken() {
 
 export function saveSession(session) {
   localStorage.setItem('cpgrams_token', session.access_token)
-  localStorage.setItem('cpgrams_user', JSON.stringify({ name: session.name, email: session.email, role: session.role }))
+  localStorage.setItem('cpgrams_user', JSON.stringify({ 
+      name: session.name, 
+      email: session.email, 
+      role: session.role,
+      state_code: session.state_code,
+      district_code: session.district_code
+  }))
 }
 
 export function getUser() {

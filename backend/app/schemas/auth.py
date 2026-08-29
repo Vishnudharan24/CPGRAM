@@ -40,3 +40,5 @@ class TokenResponse(BaseModel):
     email: EmailStr
     organization_code: str | None = None
     level: str | None = None
+    state_code: str | None = None
+    district_code: str | None = None

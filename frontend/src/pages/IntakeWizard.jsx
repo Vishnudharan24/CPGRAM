@@ -13,6 +13,8 @@ export default function IntakeWizard({ navigate }) {
   const [step, setStep] = useState(1)
   const [organizations, setOrganizations] = useState([])
   const [organizationCode, setOrganizationCode] = useState('')
+  const [aiSuggestion, setAiSuggestion] = useState(null)
+  const [isSuggesting, setIsSuggesting] = useState(false)
   const [orgSearch, setOrgSearch] = useState('')
   const [submitted, setSubmitted] = useState(null)
   const [error, setError] = useState('')
@@ -21,11 +23,15 @@ export default function IntakeWizard({ navigate }) {
     district_code: user?.district_code || ''
   })
 
-  // Step 4 state
   const [hierarchy, setHierarchy] = useState([])
   const [selectedHierarchy, setSelectedHierarchy] = useState({})
   const [finalCategory, setFinalCategory] = useState(null)
   const [categoryInputValues, setCategoryInputValues] = useState({})
+  const [otherDetails, setOtherDetails] = useState('')
+
+  const isOtherSelected = Object.values(selectedHierarchy).some(val => 
+    val && val.toLowerCase().includes('other')
+  );
 
   useEffect(() => {
     api('/grievances/organizations')
@@ -36,12 +42,26 @@ export default function IntakeWizard({ navigate }) {
   async function classify() {
     setError('')
     try {
+      getSuggestion() // Trigger in background
       const result = await api('/grievances/classify', { method: 'POST', body: JSON.stringify({ description }) })
       setClassification(result)
       setCategory(result.category)
       setStep(2)
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function getSuggestion() {
+    setError('')
+    setIsSuggesting(true)
+    try {
+      const result = await api('/grievances/suggest-path', { method: 'POST', body: JSON.stringify({ description }) })
+      setAiSuggestion(result)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSuggesting(false)
     }
   }
 
@@ -119,6 +139,10 @@ export default function IntakeWizard({ navigate }) {
         payload.destination_routing_codes = finalCategory.destination_routing_codes;
         payload.category_input_values = categoryInputValues;
       }
+      
+      if (isOtherSelected && otherDetails) {
+        payload.category_input_values = { ...payload.category_input_values, 'Other Details': otherDetails };
+      }
 
       const result = await api('/grievances', { method: 'POST', body: JSON.stringify(payload) })
       setSubmitted(result)
@@ -147,7 +171,9 @@ export default function IntakeWizard({ navigate }) {
           Plain-language description
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={9} />
         </label>
-        <button onClick={classify}>Classify issue</button>
+        <button onClick={classify} disabled={isSuggesting}>
+          {isSuggesting ? 'Classifying...' : 'Classify issue'}
+        </button>
       </div>
       {step >= 2 && <div className="panel">
         <p className="eyebrow">Step 2</p>
@@ -155,6 +181,18 @@ export default function IntakeWizard({ navigate }) {
         <ClassificationCard result={classification} selected={category} onChange={setCategory} />
         <button className="primary" disabled={!classification} onClick={() => setStep(3)}><ArrowRight size={18} />Choose organisation</button>
       </div>}
+      
+      {(isSuggesting || aiSuggestion) && (
+        <div className="panel" style={{ gridColumn: '1 / -1', border: '2px solid var(--primary)', background: 'var(--surface-hover)' }}>
+          <p className="eyebrow">AI Assistant</p>
+          <h1>Smart Routing Suggestion</h1>
+          {isSuggesting ? (
+             <p className="muted">Analyzing your grievance to find the best organization and category path...</p>
+          ) : (
+             <p style={{ fontSize: '1.1rem', margin: 0 }}>{aiSuggestion?.suggestion_text}</p>
+          )}
+        </div>
+      )}
       {step >= 3 && <div className="panel organization-panel">
         <p className="eyebrow">Step 3</p>
         <h1>Select organisation</h1>
@@ -265,6 +303,19 @@ export default function IntakeWizard({ navigate }) {
           </div>
         )}
 
+        {isOtherSelected && (
+          <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'minmax(250px, max-content) 1fr', gap: '1rem', alignItems: 'center' }}>
+             <div style={{ fontWeight: 'bold' }}>Please specify (Other) <span className="muted" style={{fontWeight: 'normal', fontSize: '0.9em'}}>(Optional)</span></div>
+             <input 
+               type="text" 
+               value={otherDetails}
+               onChange={e => setOtherDetails(e.target.value)}
+               placeholder="Briefly describe the exact nature of the grievance..."
+               style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+             />
+          </div>
+        )}
+
         {finalCategory && (
           <div style={{ marginTop: '2rem', padding: '1rem', border: '1px solid var(--border)', borderRadius: '8px' }}>
              <h4>Summary</h4>
@@ -314,7 +365,7 @@ export default function IntakeWizard({ navigate }) {
         
         <button 
           className="primary" 
-          disabled={!finalCategory} 
+          disabled={!finalCategory && !isOtherSelected} 
           onClick={submit} 
           style={{marginTop: '1.5rem'}}
         >

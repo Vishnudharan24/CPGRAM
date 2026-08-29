@@ -16,6 +16,7 @@ from app.services.classifier import classify_description
 from app.services.routing_engine import choose_starting_department, route_grievance
 from app.services.sla_engine import open_appeal_window, open_resolution_window, close_window
 from app.services.organizations import organization_by_code, organization_options
+from app.services.llm_suggester import suggest_category_path
 
 router = APIRouter(prefix="/grievances", tags=["grievances"])
 
@@ -48,6 +49,14 @@ def classify(payload: ClassificationRequest, _user: User = Depends(require_role(
 @router.get("/organizations", response_model=list[OrganizationRead])
 def list_organizations(_user: User = Depends(require_role(UserRole.citizen, UserRole.admin))):
     return organization_options()
+
+
+@router.post("/suggest-path", response_model=dict)
+def suggest_path(payload: ClassificationRequest, _user: User = Depends(require_role(UserRole.citizen, UserRole.admin))):
+    result = suggest_category_path(payload.description)
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
 
 
 @router.post("", response_model=GrievanceDetail, status_code=status.HTTP_201_CREATED)
