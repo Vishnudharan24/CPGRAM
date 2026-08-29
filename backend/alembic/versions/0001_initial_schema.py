@@ -30,15 +30,7 @@ window_status = postgresql.ENUM("open", "met", "missed", "escalated", name="wind
 
 
 def upgrade():
-    user_role.create(op.get_bind(), checkfirst=True)
-    department_level.create(op.get_bind(), checkfirst=True)
-    grievance_category.create(op.get_bind(), checkfirst=True)
-    grievance_status.create(op.get_bind(), checkfirst=True)
-    rating.create(op.get_bind(), checkfirst=True)
-    actor_role.create(op.get_bind(), checkfirst=True)
-    atr_quality.create(op.get_bind(), checkfirst=True)
-    window_type.create(op.get_bind(), checkfirst=True)
-    window_status.create(op.get_bind(), checkfirst=True)
+
 
     op.create_table(
         "users",
@@ -111,12 +103,3 @@ def downgrade():
     op.drop_table("grievances")
     op.drop_table("departments")
     op.drop_table("users")
-    window_status.drop(op.get_bind(), checkfirst=True)
-    window_type.drop(op.get_bind(), checkfirst=True)
-    atr_quality.drop(op.get_bind(), checkfirst=True)
-    actor_role.drop(op.get_bind(), checkfirst=True)
-    rating.drop(op.get_bind(), checkfirst=True)
-    grievance_status.drop(op.get_bind(), checkfirst=True)
-    grievance_category.drop(op.get_bind(), checkfirst=True)
-    department_level.drop(op.get_bind(), checkfirst=True)
-    user_role.drop(op.get_bind(), checkfirst=True)

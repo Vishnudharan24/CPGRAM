@@ -22,7 +22,7 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <section className="panel narrow">
+    <section className="panel narrow stack">
       <div className="segmented">
         <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Login</button>
         <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Register</button>
@@ -41,6 +41,17 @@ export default function Login({ onLogin }) {
         {error && <p className="error">{error}</p>}
         <button className="primary" type="submit">{mode === 'login' ? 'Login' : 'Create account'}</button>
       </form>
+
+      {mode === 'login' && (
+        <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#666', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+          <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Demo Credentials (password: password)</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <li><button type="button" onClick={() => setForm({ ...form, email: 'ananya@example.com' })} style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: 0 }}>Citizen: ananya@example.com</button></li>
+            <li><button type="button" onClick={() => setForm({ ...form, email: 'officer@example.com' })} style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: 0 }}>Officer: officer@example.com</button></li>
+            <li><button type="button" onClick={() => setForm({ ...form, email: 'admin@example.com' })} style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: 0 }}>Admin: admin@example.com</button></li>
+          </ul>
+        </div>
+      )}
     </section>
   )
 }
