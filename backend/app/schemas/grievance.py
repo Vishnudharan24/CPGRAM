@@ -26,9 +26,25 @@ class ClassificationResponse(BaseModel):
     matched_terms: list[str]
 
 
+class OrganizationRead(BaseModel):
+    name: str
+    code: str
+
+
 class GrievanceCreate(BaseModel):
     raw_description: str
     category: GrievanceCategory
+    organization_code: str
+    category_code: str | None = None
+    parent_category_code: str | None = None
+    category_name: str | None = None
+    category_path: str | None = None
+    category_stage: int | None = None
+    field_set_id: str | None = None
+    category_input_values: dict = {}
+    destination_routing_codes: str | None = None
+    state_code: str | None = None
+    district_code: str | None = None
 
 
 class EventRead(BaseModel):
@@ -43,11 +59,23 @@ class EventRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ATRAttachmentRead(BaseModel):
+    id: UUID
+    file_name: str
+    file_path: str
+    content_type: str
+    file_size: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class ATRRead(BaseModel):
     id: UUID
     content: str
     quality_flag: ATRQuality
     created_at: datetime
+    attachments: list[ATRAttachmentRead] = []
 
     model_config = {"from_attributes": True}
 
@@ -67,13 +95,19 @@ class GrievanceListItem(BaseModel):
     id: UUID
     registration_id: str
     raw_description: str
+    organization_name: str
+    organization_code: str
     category: GrievanceCategory
     status: GrievanceStatus
     citizen_rating: Rating | None = None
     current_department: DepartmentRead
     created_at: datetime
     updated_at: datetime
+    category_path: str | None = None
+    category_input_values: dict = {}
     review_windows: list[ReviewWindowRead] = []
+    appeal_text: str | None = None
+    appeal_decision: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -81,8 +115,6 @@ class GrievanceListItem(BaseModel):
 class GrievanceDetail(GrievanceListItem):
     events: list[EventRead] = []
     atrs: list[ATRRead] = []
-    appeal_text: str | None = None
-    appeal_decision: str | None = None
 
 
 class RateRequest(BaseModel):
@@ -98,5 +130,8 @@ class ATRCreate(BaseModel):
     mark_resolved: bool = True
 
 
-class AppealDecision(BaseModel):
-    decision: str
+from pydantic import BaseModel, Field
+
+class AppealDecisionRequest(BaseModel):
+    action: str = Field(..., pattern="^(accept|reject)$")
+    remarks: str

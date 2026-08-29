@@ -24,11 +24,13 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-this-for-demo}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-1440}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost}
+    volumes:
+      - ./backend:/app
     depends_on:
       postgres:
         condition: service_healthy
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
 
   nginx:
     build:

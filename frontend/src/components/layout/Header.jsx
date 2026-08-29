@@ -11,9 +11,21 @@ export default function Header({ user, navigate, onLogout }) {
         </span>
       </button>
       <div className="top-actions">
-        <button title="Lodge grievance" onClick={() => navigate('/file')}><FilePlus2 size={18} />Lodge</button>
-        <button title="View status" onClick={() => navigate('/dashboard')}><LayoutDashboard size={18} />Status</button>
-        <button title="Officer console" onClick={() => navigate('/officer')}><ShieldCheck size={18} />Officer</button>
+        {!user || user.role === 'citizen' ? (
+          <>
+            <button title="Lodge grievance" onClick={() => navigate('/file')}><FilePlus2 size={18} />Lodge</button>
+            <button title="View status" onClick={() => navigate('/dashboard')}><LayoutDashboard size={18} />Status</button>
+            {!user && <button title="Officer console" onClick={() => navigate('/officer')}><ShieldCheck size={18} />Officer</button>}
+          </>
+        ) : (
+          <>
+            <button title="Grievances" onClick={() => navigate('/officer')}><LayoutDashboard size={18} />Grievances</button>
+            {(user.role === 'admin' || user.role === 'npg') && (
+              <button title="Manage Officers" onClick={() => navigate('/officer/users')}><ShieldCheck size={18} />Manage Officers</button>
+            )}
+          </>
+        )}
+        
         {user ? (
           <button title="Logout" onClick={onLogout}><LogOut size={18} />{user.name.split(' ')[0]}</button>
         ) : (

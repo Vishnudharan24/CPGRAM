@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileText, LayoutDashboard, LogIn, ShieldCheck } from 'lucide-react'
+import { FileText, LayoutDashboard, LogIn, LogOut, ShieldCheck } from 'lucide-react'
 import { api, clearSession, getToken, getUser } from './api/client.js'
 import Header from './components/layout/Header.jsx'
 import Landing from './pages/Landing.jsx'
@@ -7,14 +7,15 @@ import Login from './pages/Login.jsx'
 import IntakeWizard from './pages/IntakeWizard.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import GrievanceDetail from './pages/GrievanceDetail.jsx'
-import OfficerConsole from './pages/OfficerConsole.jsx'
+import OfficerDashboard from './pages/OfficerDashboard.jsx'
 
 const routes = {
   '/': Landing,
   '/login': Login,
   '/file': IntakeWizard,
   '/dashboard': Dashboard,
-  '/officer': OfficerConsole
+  '/officer': OfficerDashboard,
+  '/officer/users': OfficerDashboard
 }
 
 export default function App() {
@@ -41,7 +42,12 @@ export default function App() {
 
   function onLogin() {
     setSessionTick((value) => value + 1)
-    navigate('/dashboard')
+    const currentUser = getUser()
+    if (currentUser?.role === 'citizen') {
+      navigate('/dashboard')
+    } else {
+      navigate('/officer')
+    }
   }
 
   const detailMatch = path.match(/^\/grievances\/(.+)$/)
@@ -61,10 +67,25 @@ export default function App() {
         )}
       </main>
       <nav className="mobile-nav" aria-label="Primary">
-        <button onClick={() => navigate('/file')}><FileText size={18} />File</button>
-        <button onClick={() => navigate('/dashboard')}><LayoutDashboard size={18} />Track</button>
-        <button onClick={() => navigate('/officer')}><ShieldCheck size={18} />Officer</button>
-        <button onClick={() => navigate('/login')}><LogIn size={18} />Login</button>
+        {!authed || user?.role === 'citizen' ? (
+          <>
+            <button onClick={() => navigate('/file')}><FileText size={18} />File</button>
+            <button onClick={() => navigate('/dashboard')}><LayoutDashboard size={18} />Track</button>
+            {!authed && <button onClick={() => navigate('/officer')}><ShieldCheck size={18} />Officer</button>}
+          </>
+        ) : (
+          <>
+            <button onClick={() => navigate('/officer')}><LayoutDashboard size={18} />Cases</button>
+            {(user?.role === 'admin' || user?.role === 'npg') && (
+               <button onClick={() => navigate('/officer/users')}><ShieldCheck size={18} />Officers</button>
+            )}
+          </>
+        )}
+        {authed ? (
+           <button onClick={onLogout}><LogOut size={18} />Logout</button>
+        ) : (
+           <button onClick={() => navigate('/login')}><LogIn size={18} />Login</button>
+        )}
       </nav>
     </>
   )

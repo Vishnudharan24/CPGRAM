@@ -5,15 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.enums import ActorRole, GrievanceStatus, Rating, UserRole, WindowType
+from app.core.enums import ActorRole, GrievanceStatus, Rating, UserRole, WindowType, WindowStatus
+from app.core.rbac import apply_rbac_filter
 from app.deps import get_db, require_role
 from app.models.grievance import Grievance
 from app.models.grievance_event import GrievanceEvent
 from app.models.user import User
-from app.schemas.grievance import AppealRequest, ClassificationRequest, ClassificationResponse, GrievanceCreate, GrievanceDetail, GrievanceListItem, RateRequest
+from app.schemas.grievance import AppealDecisionRequest, AppealRequest, ClassificationRequest, ClassificationResponse, GrievanceCreate, GrievanceDetail, GrievanceListItem, OrganizationRead, RateRequest
 from app.services.classifier import classify_description
 from app.services.routing_engine import choose_starting_department, route_grievance
-from app.services.sla_engine import open_appeal_window, open_resolution_window
+from app.services.sla_engine import open_appeal_window, open_resolution_window, close_window
+from app.services.organizations import organization_by_code, organization_options
 
 router = APIRouter(prefix="/grievances", tags=["grievances"])
 
@@ -43,6 +45,11 @@ def classify(payload: ClassificationRequest, _user: User = Depends(require_role(
     return ClassificationResponse(**result.__dict__)
 
 
+@router.get("/organizations", response_model=list[OrganizationRead])
+def list_organizations(_user: User = Depends(require_role(UserRole.citizen, UserRole.admin))):
+    return organization_options()
+
+
 @router.post("", response_model=GrievanceDetail, status_code=status.HTTP_201_CREATED)
 def create_grievance(payload: GrievanceCreate, db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.admin))):
     count = db.scalar(select(func.count(Grievance.id))) or 0
@@ -50,13 +57,28 @@ def create_grievance(payload: GrievanceCreate, db: Session = Depends(get_db), us
     starting_department = choose_starting_department(db, payload.raw_description)
     if not starting_department:
         raise HTTPException(status_code=500, detail="No departments seeded")
+    organization = organization_by_code(payload.organization_code)
+    if not organization:
+        raise HTTPException(status_code=400, detail="Invalid organisation selected")
     grievance = Grievance(
         registration_id=registration_id,
         citizen_id=user.id,
         current_department_id=starting_department.id,
         raw_description=payload.raw_description,
+        organization_name=organization["name"],
+        organization_code=organization["code"],
         category=payload.category,
+        category_code=payload.category_code,
+        parent_category_code=payload.parent_category_code,
+        category_name=payload.category_name,
+        category_path=payload.category_path,
+        category_stage=payload.category_stage,
+        field_set_id=payload.field_set_id,
+        category_input_values=payload.category_input_values,
+        destination_routing_codes=payload.destination_routing_codes,
         status=GrievanceStatus.submitted,
+        state_code=payload.state_code or user.state_code,
+        district_code=payload.district_code or user.district_code,
     )
     db.add(grievance)
     db.flush()
@@ -83,19 +105,25 @@ def create_grievance(payload: GrievanceCreate, db: Session = Depends(get_db), us
 
 
 @router.get("", response_model=list[GrievanceListItem])
-def list_grievances(db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin))):
-    stmt = select(Grievance).options(selectinload(Grievance.current_department), selectinload(Grievance.review_windows)).order_by(Grievance.updated_at.desc())
-    if user.role == UserRole.citizen:
-        stmt = stmt.where(Grievance.citizen_id == user.id)
+def list_grievances(db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin, UserRole.npg, UserRole.gro, UserRole.appellate_authority))):
+    stmt = apply_rbac_filter(select(Grievance).options(selectinload(Grievance.current_department), selectinload(Grievance.review_windows)).order_by(Grievance.updated_at.desc()), user)
+    
+    if user.role == UserRole.appellate_authority:
+        stmt = stmt.where(Grievance.appeal_text.is_not(None))
+        
     return db.scalars(stmt).all()
 
 
 @router.get("/{grievance_id}", response_model=GrievanceDetail)
-def get_grievance(grievance_id: UUID, db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin))):
+def get_grievance(grievance_id: UUID, db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.citizen, UserRole.officer, UserRole.admin, UserRole.npg, UserRole.gro, UserRole.appellate_authority))):
     grievance = _load_grievance(db, grievance_id)
     if not grievance:
         raise HTTPException(status_code=404, detail="Grievance not found")
-    _ensure_owner_or_staff(grievance, user)
+    # Enforce RBAC
+    authorized = db.scalar(apply_rbac_filter(select(Grievance).where(Grievance.id == grievance_id), user))
+    if not authorized:
+        raise HTTPException(status_code=403, detail="Not authorized to view this grievance")
+        
     return grievance
 
 
@@ -111,6 +139,11 @@ def rate_grievance(grievance_id: UUID, payload: RateRequest, db: Session = Depen
         open_appeal_window(db, grievance.id)
     else:
         grievance.status = GrievanceStatus.closed
+        # Close any lingering open windows since the citizen is satisfied
+        for window in grievance.review_windows:
+            if window.status == WindowStatus.open:
+                window.status = WindowStatus.met
+                window.closed_at = utcnow()
     db.add(GrievanceEvent(grievance_id=grievance.id, event_type="rated", actor_role=ActorRole.citizen, payload={"rating": payload.rating.value}))
     db.commit()
     return _load_grievance(db, grievance.id)
@@ -126,5 +159,34 @@ def file_appeal(grievance_id: UUID, payload: AppealRequest, db: Session = Depend
         raise HTTPException(status_code=400, detail="Appeal is available after a Poor rating")
     grievance.appeal_text = payload.text
     db.add(GrievanceEvent(grievance_id=grievance.id, event_type="appeal_filed", actor_role=ActorRole.citizen, payload={"text": payload.text}))
+    db.commit()
+    return _load_grievance(db, grievance.id)
+
+
+@router.post("/{grievance_id}/appeal-decision", response_model=GrievanceDetail)
+def submit_appeal_decision(grievance_id: UUID, payload: AppealDecisionRequest, db: Session = Depends(get_db), user: User = Depends(require_role(UserRole.appellate_authority, UserRole.admin))):
+    grievance = _load_grievance(db, grievance_id)
+    if not grievance:
+        raise HTTPException(status_code=404, detail="Grievance not found")
+    
+    if user.role == UserRole.appellate_authority and grievance.organization_code != user.organization_code:
+        raise HTTPException(status_code=403, detail="Not authorized to act on this grievance")
+        
+    if grievance.status != GrievanceStatus.appeal_open:
+        raise HTTPException(status_code=400, detail="Grievance is not open for appeal decisions")
+        
+    grievance.appeal_decision = f"[{payload.action.upper()}] {payload.remarks}"
+    
+    if payload.action == "accept":
+        # Citizen is right, return it to the GRO
+        grievance.status = GrievanceStatus.under_review
+        db.add(GrievanceEvent(grievance_id=grievance.id, event_type="appeal_accepted", actor_role=ActorRole.appellate_authority, payload={"remarks": payload.remarks}))
+        open_resolution_window(db, grievance.id)
+    else:
+        # GRO was right, close it
+        grievance.status = GrievanceStatus.closed
+        db.add(GrievanceEvent(grievance_id=grievance.id, event_type="appeal_rejected", actor_role=ActorRole.appellate_authority, payload={"remarks": payload.remarks}))
+        
+    close_window(db, grievance.id, WindowType.appeal)
     db.commit()
     return _load_grievance(db, grievance.id)

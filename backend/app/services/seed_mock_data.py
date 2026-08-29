@@ -46,6 +46,8 @@ def create_seed_grievance(db, citizen, registration_id, description, category, s
         citizen_id=citizen.id,
         current_department_id=department.id,
         raw_description=description,
+        organization_name="Public Services Ministry",
+        organization_code="PUBLIC",
         category=category,
         status=status,
         citizen_rating=rating,
@@ -87,13 +89,36 @@ def create_seed_grievance(db, citizen, registration_id, description, category, s
 
 
 def seed():
-    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         ananya = get_or_create_user(db, "ananya@example.com", "Ananya Sharma", UserRole.citizen)
         rahul = get_or_create_user(db, "rahul@example.com", "Rahul Nair", UserRole.citizen)
         get_or_create_user(db, "officer@example.com", "Demo Grievance Officer", UserRole.officer)
         get_or_create_user(db, "admin@example.com", "Demo Admin", UserRole.admin)
+
+        # Seed 91 NPGs
+        import json
+        from pathlib import Path
+        data_file = Path(__file__).parent.parent / "data" / "categories.json"
+        if data_file.exists():
+            with open(data_file, 'r', encoding='utf-8') as f:
+                cat_data = json.load(f)
+                for org_code, cats in cat_data.get("organizations", {}).items():
+                    email = f"npg_{org_code.lower()}@example.com"
+                    org_name = cats[0]["path"].split(" -> ")[0] if cats else org_code
+                    user = db.scalar(select(User).where(User.email == email))
+                    if not user:
+                        user = User(
+                            name=f"NPG - {org_name}", 
+                            email=email, 
+                            role=UserRole.npg, 
+                            phone="9999999999", 
+                            hashed_password=hash_password("npg@gov"),
+                            organization_code=org_code,
+                            level="Central"
+                        )
+                        db.add(user)
+            db.commit()
 
         benefits = get_or_create_department(db, "Citizen Benefits Ministry", DepartmentLevel.ministry)
         pensions = get_or_create_department(db, "Pension Services Department", DepartmentLevel.department, benefits)

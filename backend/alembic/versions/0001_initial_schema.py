@@ -15,7 +15,7 @@ branch_labels = None
 depends_on = None
 
 
-user_role = postgresql.ENUM("citizen", "officer", "admin", name="userrole")
+user_role = postgresql.ENUM("citizen", "officer", "admin", "npg", "gro", name="userrole")
 department_level = postgresql.ENUM("ministry", "department", "district_office", name="departmentlevel")
 grievance_category = postgresql.ENUM("complaint", "grievance", "suggestion", name="grievancecategory")
 grievance_status = postgresql.ENUM(
@@ -23,14 +23,13 @@ grievance_status = postgresql.ENUM(
     "appeal_open", "appeal_resolved", "closed", name="grievancestatus"
 )
 rating = postgresql.ENUM("good", "average", "poor", name="rating")
-actor_role = postgresql.ENUM("citizen", "officer", "system", "admin", name="actorrole")
+actor_role = postgresql.ENUM("citizen", "officer", "system", "admin", "npg", "gro", name="actorrole")
 atr_quality = postgresql.ENUM("ok", "too_short", "templated_language_detected", name="atrquality")
 window_type = postgresql.ENUM("resolution", "appeal", name="windowtype")
 window_status = postgresql.ENUM("open", "met", "missed", "escalated", name="windowstatus")
 
 
 def upgrade():
-
 
     op.create_table(
         "users",

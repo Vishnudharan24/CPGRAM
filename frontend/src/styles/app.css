@@ -127,12 +127,14 @@ main { min-height: calc(100vh - 56px); }
   padding: clamp(16px, 3vw, 24px);
 }
 .narrow { width: min(460px, calc(100% - 32px)); margin: 44px auto; }
-
-/* Typography */
-.section-head { justify-content: space-between; margin-bottom: 24px; }
-h1, h2, h3, h4 { margin: 0 0 12px; line-height: 1.2; color: var(--ds-text); font-weight: 600; }
-h2 { font-size: 1.4rem; }
-p { line-height: 1.5; margin: 0 0 12px; }
+.narrow:has(.registration-form) { width: min(720px, calc(100% - 32px)); }
+.section-head {
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+h1, h2 { margin: 0 0 0.65rem; line-height: 1.12; }
+h2 { font-size: 1.25rem; }
+p { line-height: 1.55; }
 .eyebrow {
   margin: 0 0 8px;
   color: var(--ds-text-subtle);
@@ -145,9 +147,9 @@ p { line-height: 1.5; margin: 0 0 12px; }
 .error { color: #BF2600; background: #FFEBE6; padding: 12px; border-radius: var(--ds-radius-small); margin: 0; }
 .notice { color: #0747A6; background: #DEEBFF; padding: 12px; border-radius: var(--ds-radius-small); margin: 0; }
 
-/* Forms & Inputs */
-.stack { display: grid; gap: 16px; }
-label { display: grid; gap: 6px; font-weight: 600; color: var(--ds-text); }
+.stack { display: grid; gap: 1rem; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+label { display: grid; gap: 0.45rem; font-weight: 700; }
 input, textarea, select {
   width: 100%;
   border: 2px solid var(--ds-border);
@@ -205,7 +207,27 @@ textarea { resize: vertical; min-height: 80px; }
   box-shadow: 0 1px 1px rgba(9, 30, 66, 0.25);
   border-radius: var(--ds-radius-small);
 }
-.classification h2 { text-transform: capitalize; margin: 0; }
+.classification h2 { text-transform: capitalize; }
+.organization-panel { grid-column: 1 / -1; }
+.organization-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  max-height: 560px;
+  overflow-y: auto;
+  margin: 1rem 0;
+  padding-right: 0.25rem;
+}
+.organization-card {
+  min-height: 92px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 0.7rem;
+  line-height: 1.35;
+}
+.organization-card svg { flex: 0 0 auto; color: #d94c3d; }
+.organization-card.selected { border: 2px solid #0f5d57; background: #eef8f4; }
 
 .summary-row {
   display: grid;
@@ -312,7 +334,9 @@ textarea { resize: vertical; min-height: 80px; }
   .brand small, .top-actions { display: none; }
   .hero { padding: 32px 16px 80px; }
   .hero, .two-col, .grievance-card { grid-template-columns: 1fr; }
-  .workspace { margin-top: 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .organization-grid { grid-template-columns: 1fr; max-height: none; }
+  .hero { min-height: auto; padding-bottom: 120px; }
   .summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card-meta { justify-content: flex-start; }
   .timeline div { display: block; }

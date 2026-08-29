@@ -17,6 +17,15 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
     user = User(
         name=payload.name,
+        gender=payload.gender,
+        premise_name=payload.premise_name,
+        sub_locality=payload.sub_locality,
+        locality=payload.locality,
+        country=payload.country,
+        state_code=payload.state_code,
+        district_code=payload.district_code,
+        pincode=payload.pincode,
+        mobile_number=payload.mobile_number,
         email=payload.email.lower(),
         phone=payload.phone,
         role=payload.role,
@@ -35,4 +44,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     token = create_access_token(str(user.id), user.role.value)
-    return TokenResponse(access_token=token, role=user.role, name=user.name, email=user.email)
+    return TokenResponse(
+        access_token=token, 
+        role=user.role, 
+        name=user.name, 
+        email=user.email,
+        organization_code=user.organization_code,
+        level=user.level
+    )

@@ -9,6 +9,7 @@ export default function GrievanceCard({ grievance, navigate }) {
       </div>
       <div className="card-meta">
         <span className={`badge ${grievance.category}`}>{grievance.category}</span>
+        <span>{grievance.organization_name}</span>
         <span>{grievance.current_department.name}</span>
         <SLAClock windows={grievance.review_windows} />
       </div>

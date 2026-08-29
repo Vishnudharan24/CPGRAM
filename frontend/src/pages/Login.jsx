@@ -1,9 +1,27 @@
 import { useState } from 'react'
 import { api, saveSession } from '../api/client.js'
+import { STATES } from '../utils/states.js'
+import { DISTRICTS } from '../utils/districts.js'
 
 export default function Login({ onLogin }) {
   const [mode, setMode] = useState('login')
-  const [form, setForm] = useState({ name: 'Ananya Sharma', email: 'ananya@example.com', password: 'password', role: 'citizen' })
+  const [form, setForm] = useState({
+    name: 'Ananya Sharma',
+    gender: '',
+    premise_name: '',
+    sub_locality: '',
+    locality: '',
+    country: 'India',
+    state_code: STATES[0].code,
+    district_code: DISTRICTS.find(d => d.state_code === STATES[0].code)?.code || '',
+    pincode: '',
+    mobile_number: '',
+    phone: '',
+    email: 'ananya@example.com',
+    password: 'password',
+    confirm_password: 'password',
+    role: 'citizen'
+  })
   const [error, setError] = useState('')
 
   async function submit(event) {
@@ -14,6 +32,12 @@ export default function Login({ onLogin }) {
         method: 'POST',
         body: JSON.stringify(form)
       })
+      if (window.location.pathname === '/officer' && session.role === 'citizen') {
+        throw new Error('This login portal is for officers only. Please use the standard citizen login.')
+      }
+      if (window.location.pathname !== '/officer' && session.role !== 'citizen') {
+        throw new Error('This login portal is for citizens only. Please use the officer login.')
+      }
       saveSession(session)
       onLogin()
     } catch (err) {
@@ -22,7 +46,7 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <section className="panel narrow stack">
+    <section className="panel narrow">
       <div className="segmented">
         <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Login</button>
         <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Register</button>
@@ -32,11 +56,9 @@ export default function Login({ onLogin }) {
         <label>Email<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
         <label>Password<input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>
         {mode === 'register' && (
-          <label>Role<select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-            <option value="citizen">Citizen</option>
-            <option value="officer">Officer</option>
-            <option value="admin">Admin</option>
-          </select></label>
+          <>
+          <label>Confirm password<input required type="password" value={form.confirm_password} onChange={(e) => setForm({ ...form, confirm_password: e.target.value })} /></label>
+          </>
         )}
         {error && <p className="error">{error}</p>}
         <button className="primary" type="submit">{mode === 'login' ? 'Login' : 'Create account'}</button>
